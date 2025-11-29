@@ -419,12 +419,10 @@ Esses efeitos interagem: por exemplo, um algoritmo com excelente taxa de compres
 | T26 | gzip      | pequeno | 5G   |
 | T27 | brotli    | pequeno | 5G   |
 | T28 | zstd      | pequeno | 5G   |
-
 | T29 | none      | médio   | 5G   |
 | T30 | gzip      | médio   | 5G   |
 | T31 | brotli    | médio   | 5G   |
 | T32 | zstd      | médio   | 5G   |
-
 | T33 | none      | grande  | 5G   |
 | T34 | gzip      | grande  | 5G   |
 | T35 | brotli    | grande  | 5G   |
