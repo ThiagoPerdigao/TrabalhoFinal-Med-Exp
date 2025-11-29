@@ -311,8 +311,201 @@ O experimento deve ser interrompido **antes da execução** se ocorrer:
 
 ---
 
+# 7. Modelo Conceitual e Hipóteses
+
+## 7.1 Modelo conceitual (texto)
+O modelo conceitual presume que **o algoritmo de compressão** (nenhum, gzip, brotli, zstd) e **o contexto de execução** (tamanho do payload e qualidade da rede) influenciam diretamente três respostas principais no cliente mobile:
+
+- **Latência total da requisição** — afetada por bytes transmitidos (quanto menos bytes, menor tempo de transmissão em redes limitadas) e pelo tempo de CPU para descompressão (quanto maior o custo de CPU, maior o tempo no cliente);
+- **Consumo de dados (bytes transmitidos)** — reduzido pela eficiência do algoritmo de compressão;
+- **Custo computacional (CPU / tempo de descompressão)** — determinado pela complexidade do algoritmo e pela implementação no cliente.
+
+Esses efeitos interagem: por exemplo, um algoritmo com excelente taxa de compressão (brotli) reduz bytes mas pode aumentar o tempo de descompressão no cliente; em redes lentas a redução de bytes pode compensar esse overhead. Assim, o experimento mede trade-offs entre *bytes ⇄ latência ⇄ CPU* e como estes variam com **tamanho do payload** (pequeno, médio, grande) e **condição de rede** (3G/4G/5G/Wi-Fi).
+
+---
+
+## 7.2 Hipóteses formais (H₀ / H₁)
+
+> **Configuração estatística geral:** para cada questão principal usaremos testes comparativos entre grupos (ANOVA / Kruskal-Wallis) e, quando apropriado, comparações pareadas com correção (post-hoc Tukey ou Wilcoxon com Bonferroni). Nível de significância α = **0,05**.
+
+### Hipóteses relacionadas à latência (ligadas a O1 / Q1.*)
+- **H0(L1):** Não há diferença significativa na latência total média entre os algoritmos {none, gzip, brotli, zstd} sob uma dada condição de rede e tamanho de payload.  
+- **H1(L1):** Pelo menos um algoritmo difere significativamente na latência total média.
+
+- **H0(L2):** A latência média de brotli = latência média de zstd = latência média de gzip.  
+- **H1(L2):** Latências médias entre esses algoritmos não são todas iguais (direção a ser verificada nos testes post-hoc).
+
+- **H0(L3):** Em redes lentas (3G), a redução de bytes não altera significativamente o tempo total percebido.  
+- **H1(L3):** Em redes lentas (3G), a redução de bytes causada por compressão reduz significativamente o tempo total percebido.
+
+### Hipóteses relacionadas ao consumo de dados (ligadas a O2 / Q2.*)
+- **H0(D1):** Não há diferença significativa no tamanho médio compactado entre gzip, brotli e zstd.  
+- **H1(D1):** Ao menos um algoritmo apresenta diferente tamanho compactado médio.
+
+- **H0(D2):** A taxa de compressão é independente do tamanho do payload.  
+- **H1(D2):** A taxa de compressão varia com o tamanho do payload (pequeno/médio/grande).
+
+### Hipóteses relacionadas ao custo de CPU (ligadas a O3 / Q3.*)
+- **H0(C1):** Não há diferença significativa no uso médio de CPU durante a descompressão entre os algoritmos.  
+- **H1(C1):** Há diferença significativa no uso médio de CPU.
+
+- **H0(C2):** O tempo de descompressão não contribui significativamente para a latência total.  
+- **H1(C2):** O tempo de descompressão contribui significativamente para a latência total.
+
+### Hipóteses relacionadas ao tamanho do payload (ligadas a O4 / Q4.*)
+- **H0(S1):** O efeito do algoritmo sobre latência/bytes/CPU não depende do tamanho do payload (efeito aditivo sem interação).  
+- **H1(S1):** Existe interação entre algoritmo e tamanho do payload (efeito dependente do tamanho).
+
+---
+
+## 7.3 Nível de significância e considerações de poder
+- **α (nível de significância):** 0,05.  
+- **Poder desejado (1 − β):** 0,80 (alvo), indicando probabilidade de detectar efeitos relevantes.  
+- **Consideração prática sobre tamanho de amostra:** antes do experimento completo será realizado um **piloto** (R = 10 repetições por combinação) para estimar o desvio-padrão e o tamanho de efeito. Com base nisso será feito um cálculo formal de tamanho de amostra (ex.: ANOVA one-way/fatorial).  
+- **Recomendação preliminar:** planejar **mínimo R = 30** repetições por combinação (celular de fator) como base prática; se o piloto indicar efeito médio (f ≈ 0,25), pode ser necessário aumentar para ≈ 40–50 repetições por célula para alcançar poder 0,8 em ANOVA fatorial.
+
+---
+
+# 8. Variáveis, Fatores, Tratamentos e Objetos de Estudo
+
+## 8.1 Objetos de estudo
+- **Endpoint(s) do servidor** que retornam payloads JSON idênticos para cada condição de compressão.  
+- **App Android de teste** que executa requisições, descomprime (se aplicável), mede tempos, captura uso CPU e grava logs/CSV.  
+- **Payloads JSON** (coleção de arquivos/strings) categorizados como: pequeno (5–20 KB), médio (50–200 KB), grande (500 KB–2 MB).  
+- **Ambiente de rede** (simulador tc / Network Link Conditioner ou rede real).
+
+---
+
+## 8.2 Visão geral de sujeitos / participantes
+- **Participantes humanos:** nenhum (execução automatizada).  
+- **Dispositivos:** 1–3 dispositivos Android representativos (mínimo um device de referência; ideal ter dois adicionais para validação externa).  
+- **Operadores:** pesquisador que dispara os scripts e monitora execução.
+
+---
+
+## 8.3 Variáveis (tabela)
+
+| Código | Variável | Tipo | Descrição |
+|--------|---------:|------|-----------|
+| V1 | Algoritmo de compressão | Independente (fator) | Níveis: none, gzip, brotli, zstd |
+| V2 | Tamanho do payload | Independente (fator) | Níveis: pequeno, médio, grande |
+| V3 | Condição de rede | Independente (fator) | Níveis: 3G, 4G, 5G, Wi-Fi |
+| V4 | Latência total (M1) | Dependente | Tempo request→response (ms) |
+| V5 | RTT (M2) | Dependente | ms |
+| V6 | Latência de download (M3) | Dependente | ms |
+| V7 | Tamanho compactado (M8) | Dependente | bytes |
+| V8 | Taxa de compressão (M9) | Dependente | proporção |
+| V9 | Uso de CPU durante descompressão (M10) | Dependente | % |
+| V10 | Tempo de descompressão (M11) | Dependente | ms |
+| V11 | Throughput efetivo (M14) | Dependente | kB/s |
+| V12 | Dispositivo | Controle / bloqueio | Modelo e especificação do hardware (mantido ou usado em blocos) |
+| V13 | Ordem de execução | Variável de bloqueio | Nivel a ser randomizado/contrabalançado |
+
+---
+
+## 8.4 Fatores, Níveis e Tratamentos (tabela com combinações)
+
+**Fatores principais:**
+- **F1 – Algoritmo (4 níveis):** none, gzip, brotli, zstd  
+- **F2 – Tamanho do payload (3 níveis):** pequeno, médio, grande  
+- **F3 – Condição de rede (4 níveis):** 3G, 4G, 5G, Wi-Fi  
+- **F4 – Dispositivo (bloqueio; 1–3 níveis):** Device A (referência), Device B (opcional), Device C (opcional)
+
+**Tratamentos e combinações:**
+
+| ID  | Algoritmo | Payload | Rede |
+|-----|-----------|---------|------|
+| T25 | none      | pequeno | 5G   |
+| T26 | gzip      | pequeno | 5G   |
+| T27 | brotli    | pequeno | 5G   |
+| T28 | zstd      | pequeno | 5G   |
+
+| T29 | none      | médio   | 5G   |
+| T30 | gzip      | médio   | 5G   |
+| T31 | brotli    | médio   | 5G   |
+| T32 | zstd      | médio   | 5G   |
+
+| T33 | none      | grande  | 5G   |
+| T34 | gzip      | grande  | 5G   |
+| T35 | brotli    | grande  | 5G   |
+| T36 | zstd      | grande  | 5G   |
 
 
+> **Número de células no fatorial completo (por dispositivo):** 4 (algoritmos) × 3 (tamanhos) × 4 (redes) = **48 combinações** por dispositivo.  
+> Com R repetições planejadas por combinação, total de execuções = 48 × R × número_de_dispositivos.
+
+---
+
+## 8.5 Variáveis dependentes (resumo)
+As respostas principais a serem medidas e analisadas: Latência Total, RTT, Latência de Download, Tamanho Compactado, Taxa de Compressão, Uso de CPU, Tempo de Descompressão, Throughput.
+
+---
+
+## 8.6 Variáveis de controle / bloqueio
+- **Dispositivo (hardware)** — idealmente usar blocos por dispositivo para controlar efeito do hardware.  
+- **Versão do app** — manter única e imutável durante coleta.  
+- **Ambiente do servidor** — mesmo servidor/instância para todas as execuções.  
+- **Hora do dia** — randomizar execuções ou bloquear por janela para reduzir efeito de tráfego externo.  
+- **Cache** — desabilitado no cliente e no servidor para evitar efeitos de cache.
+
+---
+
+## 8.7 Possíveis variáveis de confusão conhecidas
+- **Variações inesperadas na rede real** (quando usadas) — mitigar priorizando rede simulada.  
+- **Processos concorrentes no dispositivo** (background jobs) — mitigar com device em modo avião com apenas conexão de teste.  
+- **Diferenças na implementação do algoritmo** (bibliotecas) — usar implementações bem conhecidas e consistentes entre servidor/cliente.  
+- **Retransmissões TCP** — coletar métricas de nível de transporte para identificar e, se necessário, excluir execuções com retransmissões excessivas.
+
+---
+
+# 9. Desenho Experimental
+
+## 9.1 Tipo de desenho
+- **Fatorial completo** (3 fatores principais: Algoritmo × Tamanho × Rede) — permite estimar efeitos principais e interações.  
+- Justificativa: precisamos avaliar não só diferenças entre algoritmos (efeito principal), mas também como essas diferenças dependem do tamanho do payload e da qualidade da rede (interações).
+
+## 9.2 Randomização e alocação
+- **O que será randomizado:** ordem das execuções dentro de cada bloco (por dispositivo), seleção aleatória de payloads dentro de cada categoria (pequeno/médio/grande) quando existir mais de um exemplar.  
+- **Como será feita:** scripts de automação gerarão uma lista aleatória seedada (ex.: `python random.shuffle`) para a sequência de execuções e serão reusados os seeds para reprodutibilidade.  
+- **Alocação:** cada combinação F1×F2×F3 será executada R vezes por dispositivo; as R execuções serão distribuídas ao longo do tempo e randomizadas para evitar tendência temporal.
+
+## 9.3 Balanceamento e contrabalanço
+- **Balanceamento:** o desenho fatorial garante que todos os níveis de fatores sejam representados igualmente. Planejamos executar o mesmo número R de repetições em cada célula do fatorial.  
+- **Contrabalanço (order effects):** a ordem de algoritmos será alternada e randomizada; em execuções sequenciais que envolvam múltiplos algoritmos, aplicar um intervalo de “respiro” entre execuções (por exemplo, 5 s) e reiniciar processos críticos para reduzir efeitos residuais.
+
+## 9.4 Número de grupos e sessões
+- **Grupos experimentais:** cada **combinação** de fatores é tratada como um "grupo" (total 48 por dispositivo).  
+- **Sessões por sujeito/dispositivo:** cada dispositivo executa todas as 48 combinações; pode-se dividir em sessões diárias para evitar sobrecarga: ex.: 2 sessões × 24 combinações.  
+- **Repetições (R):** **mínimo R = 30**, recomendado ajustar após piloto.  
+- **Justificativa:** R=30 é um bom compromisso prático para estimativas de média/variabilidade; entretanto, o piloto definirá se R deve ser aumentado para atingir poder 0,8 para efeitos menores.
+
+---
+
+## 9.5 Plano de execução prático (resumo passo-a-passo)
+1. Preparar payloads e endpoints do servidor (mesmos dados lógicos para cada algoritmo).  
+2. Implementar rotinas de medição no app (timestamps, bytes, CPU snapshot antes/durante/descompressão).  
+3. Testar e validar pipeline com **piloto**: 10 repetições por célula em um único device.  
+4. Estimar desvios e recalcular R via análise de poder; ajustar R se necessário.  
+5. Executar experimento fatorial completo por dispositivo, com randomização da ordem.  
+6. Agregar CSVs, aplicar limpeza (remover execuções com falha ou retransmissões anômalas), e então análise estatística.
+
+---
+
+## 9.6 Considerações sobre análises estatísticas previstas (resumo)
+- **Testes para diferenças entre algoritmos:** ANOVA fatorial (se pressuposições atendidas) ou Kruskal-Wallis / modelos lineares generalizados caso de não normalidade/heterocedasticidade.  
+- **Interações:** avaliar Algoritmo × Tamanho e Algoritmo × Rede via ANOVA fatorial; modelagem com regressão multivariada para controlar covariáveis (por exemplo, RTT).  
+- **Comparações pareadas / post-hoc:** Tukey HSD (ANOVA) ou Dunn test com correção (não paramétricos).  
+- **Efeitos de dimensão:** apresentar médias, intervalos de confiança (95%) e tamanhos de efeito (Cohen’s d ou f).
+
+---
+
+## 9.7 Exemplo de cálculo aproximado de esforço (execuções)
+- **Células por dispositivo:** 48  
+- **R (repetições) planejado:** 30 (mínimo)  
+- **Execuções por dispositivo:** 48 × 30 = **1.440 requisições**  
+- **Com 1 device de referência:** 1.440 requisições ≈ executáveis em horas/dias dependendo da latência e intervalos; automatizar para rodar continuamente com checkpoints.
+
+---
 
 
 ## **Referências**
