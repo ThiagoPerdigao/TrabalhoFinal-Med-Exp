@@ -505,6 +505,425 @@ As respostas principais a serem medidas e analisadas: Latência Total, RTT, Lat�
 
 ---
 
+# 10. População, Sujeitos e Amostragem
+### *Amostragem de Sistemas Android para Análise de Desempenho*
+
+---
+
+## 10.1 População-alvo
+A população-alvo deste estudo não são humanos, mas sistemas computacionais representativos do ecossistema mobile Android. Mais especificamente, o experimento visa gerar conclusões aplicáveis a aplicações Android nativas que consomem APIs RESTful com payloads JSON em redes celulares.
+
+---
+
+## 10.2 Critérios de inclusão de sujeitos
+
+| **Critério** | **Descrição** |
+|--------------|---------------|
+| **Dispositivos** | Smartphones Android com versão do sistema >= 10. |
+| **Hardware** | Deve possuir capacidade de hardware para executar descompressão de software sem aceleração dedicada. |
+| **Conectividade** | Deve suportar conexões Wi-Fi e, idealmente, ter capacidade para redes celulares para testes em cenários reais (opcional). |
+| **Estado** | Deve poder ser reiniciado e ter seus processos de background controlados para garantir um ambiente de teste limpo. |
+
+---
+
+## 10.3 Critérios de exclusão de sujeitos
+
+- Dispositivos com root ou modificações de firmware que alterem significativamente o comportamento da rede ou do sistema.
+- Dispositivos com defeitos conhecidos de hardware que afetem o desempenho da CPU ou da rede.
+- Emuladores Android, pois seu desempenho de rede e CPU não reflete com precisão o de hardware real.
+
+---
+
+## 10.4 Tamanho da amostra planejado (por grupo)
+
+| **Componente** | **Planejamento** | **Justificativa/Detalhes** |
+|----------------|------------------|----------------------------|
+| **Sujeitos (Dispositivos)** | 1 dispositivo como referência principal. A inclusão de um segundo dispositivo (modelo diferente) é altamente desejável. | Restrição de recursos. O segundo modelo visa uma verificação preliminar de validade externa. |
+| **Repetições (Unidades Experimentais - R)** | Mínimo de 30 repetições por combinação experimental. | Cálculo final será ajustado após o piloto para atingir um poder estatístico (1-β) de pelo menos 0,80 para efeitos de tamanho médio. |
+
+---
+
+## 10.5 Método de seleção / recrutamento
+
+| **Método** | **Descrição** | **Justificativa** |
+|------------|---------------|-------------------|
+| **Amostra de conveniência** | Os dispositivos serão os disponíveis ao pesquisador (PI). O dispositivo principal será selecionado por ser um modelo intermediário/comum no mercado. | Dada a natureza técnica do experimento (sem participantes humanos) e as restrições de recursos, uma amostra de conveniência de dispositivos é aceitável, desde que as limitações sejam claramente documentadas. |
+
+---
+
+## 10.6 Treinamento e preparação dos sujeitos
+
+| **Etapa** | **Procedimento** |
+|-----------|------------------|
+| **Preparação do Dispositivo** | Procedimento padrão antes de cada sessão: reinicialização, desabilitação de atualizações automáticas, fechamento de apps em background e ativação do modo avião (com apenas a interface de teste de rede reativada). |
+| **Automação** | Um script automatizado (via ADB) será usado sempre que possível para garantir a consistência do estado inicial do dispositivo. |
+
+---
+
+## 10.7 Fluxo do experimento
+
+# Fluxograma Operacional - Detalhamento por Passo
+
+![Fluxograma Operacional da Pesquisa](media/fluxograma.png)
+
+A Tabela abaixo apresenta todas as etapas do experimento, os instrumentos envolvidos, as decisões operacionais e a relação entre cada passo e as variáveis do estudo. Este fluxograma assegura padronização, controle de variáveis de confusão e rastreabilidade completa da execução.
+
+| Fase | Nº | Título do Passo | Atividade Detalhada | Instrumentos / Objeto / Stakeholders |
+|------|----|------------------|---------------------|---------------------------------------|
+| **Pré-Execução** | 1 | **Preparação da Infraestrutura** | Configurar o servidor Linux com endpoints distintos (APIs) para cada um dos algoritmos de compressão a serem testados: `none` (sem compressão), `gzip`, `brotli` e `zstd`. | **Instrumento:** Servidor Linux. **Variável Independente (V1):** Algoritmo de Compressão. |
+| | 2 | **Desenvolvimento e Instrumentação do Aplicativo** | Desenvolver o aplicativo Android de teste que integra bibliotecas para descompressão dos algoritmos e módulos de logging. O app deve ser capaz de capturar e registrar automaticamente todas as 12 métricas definidas (M1 a M12). | **Instrumento:** Aplicativo Android. **Métricas:** Implementação de M1 a M12 para coleta. |
+| | 3 | **Geração dos Payloads de Teste** | Criar e validar um conjunto de payloads no formato JSON, categorizados em três tamanhos distintos: Pequeno (~1KB), Médio (~10KB) e Grande (~100KB). Estes serão os dados transmitidos. | **Objeto de Estudo:** Payloads JSON. **Variável Independente (V2):** Tamanho do Payload. |
+| | 4 | **Configuração do Ambiente de Rede Controlado** | Configurar um simulador de rede (como `tc` no Linux ou Network Link Conditioner) para emular as condições de latência, jitter e perda de pacotes dos perfis de rede: 3G, 4G, 5G e Wi-Fi (ótimas condições). | **Instrumento:** Simulador de rede. **Variável Independente (V3):** Condição de Rede. |
+| | 5 | **Execução do Piloto** | Realizar uma execução preliminar com um subconjunto do experimento (ex: 10 repetições para algumas combinações) no dispositivo principal. Objetivo: validar a instrumentação, a coleta de dados e a estabilidade do ambiente. | **Stakeholders:** Pesquisador Principal (PI) e Orientador. **Decisão:** Verificar consistência dos dados para prosseguir. |
+| **Execução** | 6 | **Inicialização do Bloco por Dispositivo** | Preparar o dispositivo móvel para o teste: ativar modo avião, conectar apenas à rede Wi-Fi de teste, fechar todos os aplicativos em segundo plano. Este passo visa controlar variáveis de confusão. | **Variável de Bloqueio (V12):** Dispositivo (cada um é um bloco no experimento). |
+| | 7 | **Seleção e Aplicação da Condição Experimental** | Um script mestre, seguindo uma ordem randomizada, seleciona a próxima combinação única de fatores: Algoritmo (V1) + Tamanho de Payload (V2) + Condição de Rede (V3). Aplica a configuração de rede no simulador. | **Variável Controlada (V13):** Ordem de Execução (randomizada). |
+| | 8 | **Execução da Requisição e Coleta Primária** | O app Android dispara uma requisição HTTP(S) para o endpoint do servidor correspondente ao algoritmo. Cronometra o ciclo completo request-response. Registra timestamps, tamanho dos dados e inicia o monitor de CPU do sistema. | **Objeto de Estudo:** Endpoint do servidor. **Coleta Primária:** M1, M2, M3 (latências), M5, M7 (tamanhos), M8 (CPU). |
+| | 9 | **Processamento e Log Local** | O app calcula métricas derivadas, como a Taxa de Compressão (M6), a partir dos dados brutos. Em seguida, grava todas as métricas dessa execução, juntamente com os metadados da condição experimental (V1, V2, V3, V12), em um arquivo CSV local no dispositivo. | **Atividade:** Cálculo de métricas e persistência local. |
+| | 10| **Iteração e Conclusão do Ciclo** | Verifica se foram realizadas as `R` repetições (ex: 30) para a combinação atual. Se não, volta ao passo 8. Se sim, verifica se todas as 48 combinações (4 alg * 3 tam * 4 rede) foram executadas naquele dispositivo. Se não, volta ao passo 7. Se sim, encerra a coleta no dispositivo. | **Lógica de Controle:** Garantir o número adequado de repetições e a cobertura de todas as combinações experimentais. |
+| **Pós-Execução** | 11| **Consolidação e Limpeza dos Dados** | Agregar todos os arquivos CSV de todos os dispositivos em um único conjunto de dados (dataset). Realizar limpeza: remover execuções com falha de conexão e outliers extremos baseados em regras pré-definidas (ex: latência total maior que 30 segundos). | **Stakeholder Envolvido:** PI (como analista). |
+| | 12| **Análise Estatística** | **12.1 (Descritiva):** Calcular estatísticas sumárias (média, mediana, desvio padrão, IC) para cada métrica, agrupando por condição experimental. Gerar gráficos exploratórios (boxplots, barras).<br>**12.2 (Inferencial):** Aplicar os testes de hipóteses planejados, como ANOVA fatorial para testar os efeitos principais e de interação, seguidos de testes post-hoc (ex: Tukey) para comparações detalhadas. Usar nível de significância α=0.05. | **Atividades:** Estatística descritiva e inferencial para testar as hipóteses. |
+| | 13| **Interpretação e Resposta às Questões** | Interpretar os resultados dos testes estatísticos e as tendências observadas nos gráficos para responder formalmente a cada uma das Questões de Pesquisa (Q1.1 a Q4.3) definidas no modelo GQM. | **Stakeholders:** PI e Orientador para validação científica das conclusões. |
+| | 14| **Geração de Relatório e Artefatos Finais** | Redigir o relatório técnico/acadêmico completo com metodologia, resultados, discussão e conclusões. Organizar e publicar o dataset anônimo, os scripts de automação da coleta e os scripts de análise em um repositório público para garantir a reprodutibilidade do estudo. | **Stakeholders Impactados:** Comunidade Acadêmica (replicação) e Desenvolvedores/Arquitetos (aplicação das diretrizes práticas). |
+
+# 11. Instrumentação e Protocolo Operacional
+### *Infraestrutura e Procedimentos de Execução*
+
+---
+
+## **11.1 Instrumentos de coleta**
+
+| **Instrumento** | **Função Principal** | **Saída/Detalhes** |
+|-----------------|----------------------|-------------------|
+| **Aplicativo Android Instrumentado (App Logger)** | Coletar timestamps de início/fim, tamanho do payload recebido e acionar coleta de CPU. | Arquivo CSV local. |
+| **Android Profiler / ADB** (`dumpsys cpuinfo`, `/proc/stat`) | Obter a utilização percentual da CPU pelo processo do app durante a janela de descompressão. | Acionado via script. |
+| **Servidor Web** (Nginx/Apache com módulos) | Servir os payloads e aplicar a compressão no lado do servidor. | Loga o algoritmo utilizado e o tamanho do payload enviado. |
+| **Scripts de Automação** (Python/Bash) | Orquestrar a sequência experimental: alterar configurações de rede, randomizar ordem, iniciar app, coletar logs via ADB e consolidar dados. | Controla todo o fluxo do experimento. |
+| **Ferramenta de Simulação de Rede** (`tc` no Linux) | Emular latência, jitter, perda de pacotes e largura de banda das redes 3G/4G/5G. | Cria ambiente de rede controlado e reprodutível. |
+
+---
+
+## 11.2 Materiais de suporte
+
+| **Material** | **Finalidade** |
+|--------------|----------------|
+| **Manual do Operador** | Documento com comandos exatos para inicializar cada ferramenta, iniciar a coleta e lidar com falhas comuns. |
+| **Planilha de Rastreamento de Execuções** | Template para registro manual (backup) do progresso (ID da combinação, horário, observações). |
+
+---
+
+## 11.3 Procedimento experimental (protocolo – visão passo a passo)
+
+| **Fase** | **Passos** |
+|----------|------------|
+| **Pré-Sessão** (30 min antes) | 1. Ligar e configurar servidor.<br>2. Reiniciar dispositivo de teste.<br>3. Executar script de preparo do dispositivo (limpeza de cache, kill de processos). |
+| **Início da Sessão** | No computador de controle, executar o **Script Mestre**. |
+| **Para cada execução (automática)** | a. Seleciona a próxima combinação (Algoritmo, Tamanho, Rede) da lista randomizada.<br>b. Configura o perfil de rede correspondente no simulador.<br>c. Envia comando broadcast ao app para iniciar a requisição configurada.<br>d. App executa a requisição, coleta dados e salva em CSV.<br>e. Script aguarda intervalo fixo de 5 segundos (cool-down).<br>f. Repete do passo (a) até completar as R repetições da combinação. |
+| **Pós-Sessão Diária** | Script consolida os CSVs do dia em um arquivo único e faz backup. |
+| **Ao Final de Todas as Sessões** | Agregar todos os arquivos de backup no dataset final. |
+
+---
+
+## 11.4 Plano de piloto
+
+| **Aspecto** | **Detalhamento** |
+|-------------|------------------|
+| **Objetivo** | Validar todo o pipeline de coleta, estimar variabilidade das métricas e identificar falhas no protocolo. |
+| **Escopo** | Executar **R=10** repetições para um subconjunto de **8 combinações** (2 algoritmos × 2 tamanhos × 2 redes) no dispositivo principal. |
+| **Critérios de Ajuste** | - **Variância da latência >50% da média:** Investigar e estabilizar ambiente de rede.<br>- **Falha na coleta de CPU >20%:** Revisar instrumentação do app.<br>- **Tempo total muito superior ao planejado:** Considerar reduzir R após recálculo do poder estatístico. |
+
+---
+
+# 12. Plano de Análise de Dados (Pré-Execução)
+### *Estratégia e Métodos Estatísticos*
+
+---
+
+## 12.1 Estratégia geral de análise
+Cada **Questão (Q)** do GQM será respondida analisando as **Métricas (M)** associadas, comparando os grupos definidos pelos **Fatores (V)**. A análise será feita em dois níveis:
+1.  **Descritiva:** apresentando médias e visualizações.
+2.  **Inferencial:** aplicando testes estatísticos para generalizar a partir da amostra.
+
+---
+
+## 12.2 Métodos estatísticos planejados
+
+| **Finalidade** | **Método/Teste** | **Condição de Aplicação** |
+|----------------|------------------|---------------------------|
+| **Pressupostos** | Shapiro-Wilk (normalidade) e Levene (homogeneidade de variâncias). | Aplicados em cada grupo de métricas antes das análises principais. |
+| **Análise Principal (3 fatores)** | ANOVA Fatorial de Três Vias (Algoritmo × Tamanho × Rede). | Para métricas contínuas (Latência, CPU) se pressupostos atendidos. Testa efeitos principais e interações. |
+| **Análise (pressupostos violados)** | Teste de Kruskal-Wallis seguido do Teste de Dunn com correção de Bonferroni. | Equivalente não paramétrico quando normalidade/homocedasticidade não são atendidas. |
+| **Comparações Pareadas** | Teste Post-Hoc de Tukey HSD. | Após uma ANOVA significativa, para identificar diferenças específicas entre algoritmos. |
+| **Análise de Correlação** | Coeficiente de correlação de Pearson ou Spearman. | Para explorar relações (ex.: entre taxa de compressão e latência - Q2.3). |
+| **Tamanho de Efeito** | η² (eta quadrado) para ANOVAs; d de Cohen para comparações pareadas. | Avalia a significância prática além da estatística. |
+
+---
+
+## 12.3 Tratamento de dados faltantes e outliers
+
+| **Tipo de Dado** | **Procedimento** |
+|------------------|------------------|
+| **Dados Faltantes** | Execuções com falha por motivo conhecido (ex.: timeout) serão registradas com um *flag* e excluídas da análise principal. A causa será analisada separadamente. |
+| **Outliers Univariados** | Valores além de `[Q1 - 3*IQR, Q3 + 3*IQR]` serão inspecionados. Se atribuídos a erros mensuráveis, serão excluídos. Outliers sem causa identificada serão mantidos, e uma **análise de sensibilidade** será realizada com e sem eles. |
+
+---
+
+## 12.4 Plano de análise para dados qualitativos (se houver)
+Não há coleta de dados qualitativos (entrevistas, questionários) planejada. Observações qualitativas do operador durante a execução serão registradas em um log e poderão ser usadas para contextualizar ou explicar anomalias quantitativas.
+
+---
+
+# 13. Avaliação de Validade (Ameaças e Mitigação*
+
+---
+
+## 13.1 Validade de conclusão
+| **Ameaça** | **Mitigação** |
+|------------|---------------|
+| Baixo poder estatístico devido a R insuficiente ou variabilidade alta. | Cálculo do tamanho de amostra pós-piloto. Aumentar R conforme necessário. Reportar tamanhos de efeito. |
+
+---
+
+## 13.2 Validade interna
+| **Ameaça** | **Categoria** | **Mitigação** |
+|------------|---------------|---------------|
+| Mudanças no ambiente durante sessão longa (ex.: atualizações em background). | History/Maturation | Reinicialização do dispositivo entre sessões, modo avião e randomização da ordem das execuções. |
+| Usar apenas um modelo de dispositivo. | Selection | Documentar como limitação. Incluir um segundo dispositivo se possível. |
+
+---
+
+## 13.3 Validade de constructo
+| **Ameaça** | **Mitigação** |
+|------------|---------------|
+| A "Latência Total" (M1) pode incluir tempo de parsing JSON além do tempo de rede e descompressão. | Isolar o tempo de descompressão (M9) via instrumentação no código. O tempo de parsing será constante entre tratamentos. |
+
+---
+
+## 13.4 Validade externa
+| **Ameaça** | **Mitigação** |
+|------------|---------------|
+| Resultados limitados a JSON, Android e redes simuladas. | Ser explícito sobre o contexto de generalização. Usar payloads com estruturas comuns. Base da simulação em parâmetros de estudos empíricos reais. |
+
+---
+
+## 13.5 Resumo das principais ameaças e estratégias de mitigação
+
+| **Ameaça** | **Categoria** | **Estratégia de Mitigação** |
+|------------|---------------|-----------------------------|
+| Variabilidade alta da rede | Conclusão/Interna | Rede simulada (controlada); muitas repetições (R). |
+| Efeitos de ordem (learning, fatigue) | Interna | Randomização completa da ordem de execução. |
+| Implementações diferentes dos algoritmos | Constructo | Usar bibliotecas padrão e amplamente adotadas (ex.: OkHttp, Brotli-Android). |
+| Generalização para outros dispositivos | Externa | Usar dispositivo de médio porte comum; documentar especificações; testar em 2 dispositivos se possível. |
+
+---
+
+# 14. Ética, Privacidade e Conformidade
+
+---
+
+## 14.1 Questões éticas
+O experimento não envolve participantes humanos, animais ou dados pessoais. Todas as operações são realizadas em dispositivos e servidores controlados pelo pesquisador. Portanto, não há questões éticas diretas relacionadas a sujeitos de pesquisa.
+
+---
+
+## 14.2 Consentimento informado
+Não aplicável.
+
+---
+
+## 14.3 Privacidade e proteção de dados
+
+| **Aspecto** | **Detalhamento** |
+|-------------|------------------|
+| **Dados Coletados** | Dados puramente de desempenho do sistema (latência, CPU, tamanho de arquivo). Payloads JSON contêm dados sintéticos, sem informação pessoal. |
+| **Proteção** | Dados armazenados em computador pessoal protegido por senha. Para compartilhamento público, apenas dados anonimizados e agregados serão disponibilizados. |
+
+---
+
+## 14.4 Aprovações necessárias
+Considerando o escopo acadêmico, técnico e a ausência de participantes humanos, não é necessária submissão a um Comitê de Ética em Pesquisa (CEP). A aprovação do orientador acadêmico é suficiente para validação metodológica e científica.
+
+---
+
+# 15. Recursos, Infraestrutura e Orçamento
+
+---
+
+## 15.1 Recursos humanos e papéis
+| **Papel** | **Responsabilidades** |
+|-----------|-----------------------|
+| **Pesquisador (PI)** | Executa todas as fases: planejamento, desenvolvimento, operação, análise, redação. |
+| **Orientador Acadêmico** | Supervisão metodológica, revisão crítica do plano e dos resultados. |
+| **Colegas de Laboratório (Opcional)** | Revisores ad hoc do protocolo. |
+
+---
+
+## 15.2 Infraestrutura técnica necessária
+- **Servidor:** Máquina Linux com Nginx/Apache, módulos de compressão (gzip, brotli, zstd) e acesso root para configuração do `tc`.
+- **Dispositivo(s) Android:** Pelo menos um smartphone Android (>=10) com depuração USB ativada.
+- **Computador de Controle:** Máquina com Android SDK (ADB), Python, e acesso ao servidor e dispositivo.
+- **Ponto de Acesso/Roteador:** Para isolar o ambiente de rede.
+
+---
+
+## 15.3 Materiais e insumos
+- Cabo USB para conexão ADB.
+- Conta em serviço de nuvem (opcional, para servidor).
+- Licenças de software: Todas as ferramentas planejadas são open-source ou gratuitas.
+
+---
+
+## 15.4 Orçamento e custos estimados
+| **Item** | **Custo Estimado** |
+|----------|-------------------|
+| **Custo Direto** | Praticamente zero (assumindo posse de dispositivo e computador pessoais, e servidor local). |
+| **Custo de Oportunidade (Tempo)** | 80-120 horas de trabalho do PI ao longo de 4-6 semanas. |
+| **Custo Potencial (Cloud)** | U$ 20-50 (se for necessária uma instância de nuvem para o servidor). |
+
+---
+
+# 16. Cronograma, Marcos e Riscos Operacionais
+
+---
+
+## 16.1 Macrocronograma (até o início da execução)
+
+| **Semana** | **Atividades Principais** | **Marco** |
+|------------|---------------------------|-----------|
+| **1** | Finalização deste plano. Desenvolvimento do app e do servidor. | Plano aprovado pelo orientador. |
+| **2** | Instrumentação completa (logging, CPU). Configuração do simulador de rede. | App e servidor instrumentados. |
+| **3** | Execução do Piloto. Análise dos dados do piloto. Cálculo final de R. | Checkpoint de validação do pipeline. |
+| **4** | Ajustes finais no protocolo. Preparação dos scripts de automação final. | Definição de Ready (DoR) atingida. |
+| **5** | **INÍCIO DA EXECUÇÃO PRINCIPAL.** | |
+
+---
+
+## 16.2 Dependências entre atividades
+- O **Piloto** depende do app, servidor e simulador estarem totalmente funcionais.
+- A **Execução Principal** depende da aprovação (Go/No-Go) baseada nos resultados do Piloto.
+- A **Análise de Dados** depende da conclusão da coleta de todos os dados planejados.
+
+---
+
+## 16.3 Riscos operacionais e plano de contingência
+
+| **Risco Operacional** | **Probabilidade** | **Impacto** | **Plano de Contingência** |
+|-----------------------|-------------------|-------------|---------------------------|
+| Dispositivo principal quebra | Baixa | Alto | Usar dispositivo de backup (modelo diferente). Documentar a mudança. |
+| Falha prolongada no servidor | Média | Alto | Ter uma imagem do servidor pronta para deploy rápido em outra máquina (local ou cloud). |
+| Script de automação apresenta bug que corrompe dados | Média | Médio | Backups incrementais após cada bloco. Teste exaustivo do script antes da execução principal. |
+| Tempo total de execução supera o disponível | Alta | Médio | Priorizar cenários críticos (ex.: 4G/Wi-Fi; payloads médios/grandes). Reduzir R se o cálculo de poder permitir. |
+
+---
+
+# 17. Governança do Experimento
+
+---
+
+## 17.1 Papéis e responsabilidades formais
+| **Papel** | **Responsável** | **Responsabilidades** |
+|-----------|-----------------|-----------------------|
+| **Dono (Owner) / PI** | Thiago Vitor Pereira Perdigão | Responsável final pelas decisões, execução e qualidade dos dados. |
+| **Orientador / Supervisor** | [Nome do Orientador] | Aprovação do plano, revisão metodológica e validação das conclusões. |
+| **Executor** | Thiago Vitor Pereira Perdigão | Execução prática do experimento. |
+
+---
+
+## 17.2 Ritos de acompanhamento pré-execução
+- **Revisão Formal do Plano:** Reunião única com o orientador para aprovação do documento (Seções 1-9).
+- **Revisão Pós-Piloto:** Reunião para apresentar resultados do piloto, variabilidade e tamanho de amostra recalculado. Decisão **Go/No-Go** para execução principal.
+
+---
+
+## 17.3 Processo de controle de mudanças no plano
+Qualquer mudança substantiva no desenho experimental, métricas ou protocolo após o início da execução principal deve ser:
+1.  **Documentada** em uma nova versão deste plano.
+2.  **Justificada** (ex.: descoberta de um bug).
+3.  **Aprovada** pelo orientador.
+4.  **Comunicada** no relatório final, explicando motivo e impacto.
+
+---
+
+# 18. Plano de Documentação e Reprodutibilidade*
+
+---
+
+## 18.1 Repositórios e convenções de nomeação
+| **Item** | **Especificação** |
+|----------|-------------------|
+| **Repositório Git** | Um repositório único (ex.: GitHub) para o projeto. |
+| **Estrutura de Pastas** | `/docs/`, `/server/`, `/android-app/`, `/scripts/`, `/data/`, `/analysis/`. |
+| **Convenção de Nomes** | `YYYYMMDD_Dispositivo_Alg_Pay_Rede_Run.csv` (ex.: `20251202_Pixel4a_gzip_medium_4g_01.csv`). |
+
+---
+
+## 18.2 Templates e artefatos padrão
+- Template de CSV de saída do app (com cabeçalhos das métricas M1-M12).
+- Template do script de configuração de rede (`tc commands`) para cada perfil.
+- Checklist de preparo do dispositivo.
+
+---
+
+## 18.3 Plano de empacotamento para replicação futura
+O repositório Git final conterá um arquivo `README.md` na raiz com:
+- **Visão Geral:** Objetivo do experimento.
+- **Pré-requisitos:** Lista de hardware/software necessários.
+- **Guia de Configuração:** Passos para reproduzir o ambiente.
+- **Guia de Execução:** Comandos para rodar os scripts.
+- **Guia de Análise:** Instruções para executar os scripts de análise.
+- **Link** para o dataset público anonimizado.
+
+---
+
+# 19. Plano de Comunicação
+
+---
+
+## 19.1 Públicos e mensagens-chave pré-execução*
+| **Público** | **Mensagem-Chave** |
+|-------------|-------------------|
+| **Orientador** | "Plano finalizado e pronto para revisão. Piloto agendado para [data]." |
+| **Colegas (opcional)** | "Irei executar um experimento de performance mobile que pode gerar insights úteis." |
+
+---
+
+## 19.2 Canais e frequência de comunicação
+| **Público** | **Canal** | **Frequência** |
+|-------------|-----------|----------------|
+| **Orientador** | Reuniões, e-mail. | Semanal/quinzenal (síncronas); e-mail para questões pontuais. |
+| **Demais** | E-mail, mensagem instantânea. | Ad hoc. |
+
+---
+
+## 19.3 Pontos de comunicação obrigatórios
+1.  **Aprovação do Plano:** Formalização por e-mail do orientador.
+2.  **Decisão Go/No-Go Pós-Piloto:** Registro em ata ou e-mail.
+3.  **Conclusão da Coleta de Dados:** Comunicação ao orientador.
+4.  **Conclusão do Relatório/Estudo:** Submissão do trabalho final.
+
+---
+
+# 20. Critérios de Prontidão para Execução (Definition of Ready)
+
+---
+
+## 20.1 Checklist de prontidão
+O experimento **só** poderá ser iniciado quando **TODOS** os itens abaixo estiverem marcados:
+
+- [ ] **Plano Experimental** revisado e aprovado pelo orientador.
+- [ ] **Aplicativo Android** instrumentado, compilado e instalado no(s) dispositivo(s).
+- [ ] **Servidor** configurado, com endpoints e módulos de compressão ativos.
+- [ ] **Ambiente de Rede Simulada** configurado e validado (perfis 3G/4G/5G/Wi-Fi).
+- [ ] **Scripts de Automação** desenvolvidos e testados em um ciclo básico.
+- [ ] **Piloto** executado com sucesso, com dados consistentes coletados.
+- [ ] **Análise Pós-Piloto** concluída, com recálculo de R (se necessário) e poder estatístico considerado adequado.
+- [ ] **Decisão Go/No-Go** formalmente registrada como **GO**.
+
+---
+
+## 20.2 Aprovações finais para iniciar a operação
+A autorização final para dar início à **Fase de Execução Principal** será uma decisão conjunta entre:
+- **O Pesquisador (PI):** Confirma que todos os itens do checklist de prontidão estão atendidos.
+- **O Orientador:** Valida que a metodologia pós-piloto é sólida e que os critérios de sucesso são realistas.
 
 ## **Referências**
 
