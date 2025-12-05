@@ -15,6 +15,10 @@
 | Versão | Data | Descrição |
 |-------|------|-----------|
 | **v1.0** | 22/11/2025 | Versão inicial da Identificação, Contexto e Problema |
+| **v1.1** | 24/11/2025 | Escopo, Objetivo, Stakeholders/Impacto, Riscos de alto nível, premissas e critérios de sucess |
+| **v1.2** | 28/11/2025 | Modelo conceitual e hipóteses; Variáveis, fatores, tratamentos e objetos de estudo; Desenho experimental |
+| **v1.3** | 02/12/2025 | População, sujeitos e amostragem; Instrumentação e protocolo operacional; Plano de análise de dados (pré-execução) |
+| **v1.4** | 02/12/2025 | Avaliação de validade (ameaças e mitigação) |
 
 ### **1.4 Datas**
 - **Criação:** 22/11/2025  
